@@ -6,8 +6,8 @@ from visualization.plot_mdp import plot_mdp_all_floors
 def main():
     campus_map = build_campus_map()
 
-    start = (0, 1, 1)       # 0. kat girişe yakın, yürünebilir
-    goal  = (5, 20, 8)      # 5. kat teras bölgesi (T)
+    start = (0, 1, 1)
+    goal  = (5, 20, 8)
 
     mdp = CampusMDP(
         campus_map=campus_map,
@@ -41,6 +41,6 @@ def main():
     print("Utility(goal):", U.get(goal, None))
 
     plot_mdp_all_floors(campus_map, U, pi, floors=[0, 5], title_prefix="MDP Utility+Policy")
-    
+
 if __name__ == "__main__":
     main()

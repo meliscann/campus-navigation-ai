@@ -13,7 +13,7 @@ class CampusProblem(Problem):
         max_y = len(self.campus_map[floor])
         max_x = len(self.campus_map[floor][0])
 
-        # --- 4-directional movements ---
+        # 4-directional movements
         directions = {
             "UP": (0, -1),
             "DOWN": (0, 1),
@@ -27,7 +27,7 @@ class CampusProblem(Problem):
                 if self.campus_map[floor][ny][nx] != "#":
                     actions.append(action)
 
-        # --- vertical movements (conditional) ---
+        # vertical movements
         cell = self.campus_map[floor][y][x]
 
         # Elevator
@@ -44,7 +44,7 @@ class CampusProblem(Problem):
             if floor > 0:
                 actions.append("STAIR_DOWN")
 
-        # Escalator (two-way)
+        # Escalator
         if cell == "X":
             if floor < max_floors - 1:
                 actions.append("ESCALATOR_UP")
@@ -83,7 +83,6 @@ class CampusProblem(Problem):
         if action == "ESCALATOR_DOWN":
             return (floor - 1, x, y)
 
-        # If an unknown action appears, keep state unchanged (safe fallback)
         return state
 
 
@@ -102,13 +101,12 @@ class CampusProblem(Problem):
             step_cost = 10
 
         else:
-            # Unknown action: penalize a bit to discourage it
+            # unknown action: penalize a bit to discourage it
             step_cost = 5
 
         return c + step_cost
 
     def action_cost(self, state1, action, state2):
-        # Delegate to path_cost with a zero base to integrate with search API.
         return self.path_cost(0, state1, action, state2)
 
     def goal_test(self, state):

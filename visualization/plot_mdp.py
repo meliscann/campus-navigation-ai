@@ -3,7 +3,6 @@ import matplotlib.pyplot as plt
 
 WALL = "#"
 
-# Aynı renk mapping'ini kullan (senin mevcut _cell_color'un)
 def _cell_color(cell: str) -> float:
     mapping = {
         "#": 0.00,  # wall
@@ -51,11 +50,10 @@ def _normalize_matrix(mat):
             if not (isinstance(v, float) and math.isnan(v)):
                 vals.append(v)
     if not vals:
-        return mat  # nothing to normalize
+        return mat
 
     vmin, vmax = min(vals), max(vals)
     if abs(vmax - vmin) < 1e-12:
-        # all same
         return [[0.5 if not (isinstance(v, float) and math.isnan(v)) else float("nan") for v in row] for row in mat]
 
     out = []
@@ -71,11 +69,6 @@ def _normalize_matrix(mat):
 
 
 def plot_mdp_floor(campus_map, U: dict, pi: dict, f: int, title: str = ""):
-    """
-    1 fig içinde:
-    - sol: utility heatmap (normalize)
-    - sağ: policy arrows (walkable cells)
-    """
     floor = campus_map[f]
     rows, cols = len(floor), len(floor[0])
 
@@ -143,14 +136,13 @@ def plot_mdp_floor(campus_map, U: dict, pi: dict, f: int, title: str = ""):
                     linewidth=0.8
                 )
 
-            # Vertical actions: sembol yaz
+            # Vertical actions
             elif a in ("ELEVATOR_UP", "ELEVATOR_DOWN", "STAIR_UP", "STAIR_DOWN", "ESCALATOR_UP", "ESCALATOR_DOWN"):
                 if "UP" in a:
                     sym = "↑"
                 else:
                     sym = "↓"
 
-                # E/S/X harfini de koy
                 # ELEVATOR -> E, STAIR -> S, ESCALATOR -> X
                 if a.startswith("ELEVATOR"):
                     kind = "E"
@@ -170,10 +162,6 @@ def plot_mdp_floor(campus_map, U: dict, pi: dict, f: int, title: str = ""):
 
 
 def plot_mdp_all_floors(campus_map, U: dict, pi: dict, floors=None, title_prefix="MDP"):
-    """
-    Çok fazla fig açmamak için her floor için ayrı fig değil,
-    seçtiğin floor'lar için sırayla tek tek çiz.
-    """
     if floors is None:
         floors = list(range(len(campus_map)))
 

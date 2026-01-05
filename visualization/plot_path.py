@@ -107,7 +107,6 @@ def plot_path_all_floors(campus_map, path, title_prefix: str = "Path"):
     floors_in_path = sorted({f for (f, _, _) in path})
     n = len(floors_in_path)
 
-    # Layout: up to 3 columns, enough rows
     cols = min(3, n)
     rows = (n + cols - 1) // cols
 
