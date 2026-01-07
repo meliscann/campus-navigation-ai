@@ -2,51 +2,46 @@
 MDP Implementation for Campus Navigation Project (Based on AIMA Chapter 16)
 
 Includes:
-- MDP class hierarchy (MDP, GridMDP)
-- Utility-based method (Value Iteration)
-
-All Policy Iteration and POMDP related algorithms have been removed for project focus.
+- MDP base class
+- GridMDP example class (optional)
+- Utility-based method: Value Iteration
 """
 
-import random
 from collections import defaultdict
-import numpy as np
-
 from core.utils import vector_add, orientations, turn_right, turn_left
 
-
-# =============================================================================
 #  MDP BASE CLASSES
-# =============================================================================
-
 class MDP:
     """Markov Decision Process representation.
 
     Parameters:
         init: Initial state
-        actlist: List or dict of actions
-        terminals: Terminal states
-        transitions: Transition model T(s, a) → [(p, s')]
-        reward: Reward function R(s)
-        states: Set of states
-        gamma: Discount factor
+        actlist: List (or other iterable) of actions
+        terminals: Iterable of terminal states
+        transitions: Transition model T[s][a] -> [(p, s')]
+        reward: Reward function mapping R[s] -> float
+        states: Set of all states
+        gamma: Discount factor in (0, 1]
     """
 
     def __init__(self, init, actlist, terminals, transitions=None, reward=None, states=None, gamma=0.9):
         if not (0 < gamma <= 1):
             raise ValueError("Gamma must satisfy 0 < gamma <= 1")
 
-        self.states = states or self.get_states_from_transitions(transitions)
-        self.init = init
-        self.actlist = actlist
-        self.terminals = terminals
         self.transitions = transitions or {}
+        self.states = states or self.get_states_from_transitions(self.transitions)
+        if self.states is None:
+            raise ValueError("States could not be inferred. Provide `states` or a valid `transitions` dict.")
+
+        self.init = init
+        self.actlist = list(actlist) if actlist is not None else []
+        self.terminals = set(terminals) if terminals is not None else set()
         self.gamma = gamma
         self.reward = reward or {s: 0 for s in self.states}
 
     def R(self, state):
         """Return reward of a state."""
-        return self.reward[state]
+        return self.reward.get(state, 0)
 
     def T(self, state, action):
         """Return transition model for (state, action)."""
@@ -58,29 +53,29 @@ class MDP:
         """Return available actions for state."""
         return [None] if state in self.terminals else self.actlist
 
-    def get_states_from_transitions(self, transitions):
-        """Extract states from transition dict."""
-        if isinstance(transitions, dict):
-            from_keys = set(transitions.keys())
-            to_states = set(
-                tr[1]
-                for actions in transitions.values()
-                for effects in actions.values()
-                for tr in effects
-            )
-            return from_keys.union(to_states)
-        return None
+    @staticmethod
+    def get_states_from_transitions(transitions):
+        """Extract states from a transitions dict."""
+        if not isinstance(transitions, dict) or not transitions:
+            return None
 
+        from_keys = set(transitions.keys())
+        to_states = set(
+            s2
+            for actions in transitions.values()
+            for effects in actions.values()
+            for (p, s2) in effects
+        )
+        return from_keys.union(to_states)
 
-# -----------------------------------------------------------------------------
 
 class GridMDP(MDP):
-    """A 2D grid-based MDP."""
+    """A 2D grid-based MDP (optional example)."""
 
-    def __init__(self, grid, terminals, init=(0, 0), gamma=.9):
-        grid.reverse()
+    def __init__(self, grid, terminals, init=(0, 0), gamma=0.9):
+        grid = list(reversed(grid))
+
         reward, states = {}, set()
-
         self.rows = len(grid)
         self.cols = len(grid[0])
         self.grid = grid
@@ -94,15 +89,17 @@ class GridMDP(MDP):
         actlist = orientations
         transitions = {s: {a: self.calculate_T(s, a) for a in actlist} for s in states}
 
-        super().__init__(init, actlist, terminals, transitions, reward, states, gamma)
+        super().__init__(init=init, actlist=actlist, terminals=terminals,
+                         transitions=transitions, reward=reward, states=states, gamma=gamma)
 
     def calculate_T(self, state, action):
         if action is None:
-            return [(0.0, state)]
+            return [(1.0, state)]
+
         return [
             (0.8, self.go(state, action)),
             (0.1, self.go(state, turn_right(action))),
-            (0.1, self.go(state, turn_left(action)))
+            (0.1, self.go(state, turn_left(action))),
         ]
 
     def go(self, state, direction):
@@ -120,35 +117,47 @@ class GridMDP(MDP):
         return self.to_grid({s: chars[a] for (s, a) in policy.items()})
 
 
-# =============================================================================
 #  MDP ALGORITHMS
-# =============================================================================
-
 def q_value(mdp, s, a, U):
-    """Compute Q-value for (s, a)."""
+    """Compute Q(s,a) = Σ p(s'|s,a) [ R + γ U(s') ]."""
     if a is None:
         return mdp.R(s)
-    total = 0
+
+    total = 0.0
     for p, s2 in mdp.T(s, a):
         if hasattr(mdp, "R_transition"):
             r = mdp.R_transition(s, a, s2)
         else:
             r = mdp.R(s)
-        total += p * (r + mdp.gamma * U[s2])
+
+        total += p * (r + mdp.gamma * U.get(s2, 0))
+
     return total
 
 
 def value_iteration(mdp, epsilon=0.001):
-    """Value iteration algorithm."""
-    U1 = {s: 0 for s in mdp.states}
+    """Value Iteration algorithm.
+
+    Returns:
+        U: dict mapping state -> utility
+    """
+    U = {s: 0.0 for s in mdp.states}
     gamma = mdp.gamma
 
+    if gamma == 1:
+        raise ValueError("gamma=1 can prevent convergence in continuing tasks; use gamma < 1.")
+
     while True:
-        U = U1.copy()
-        delta = 0
+        U_prev = U.copy()
+        delta = 0.0
+
         for s in mdp.states:
-            U1[s] = max(q_value(mdp, s, a, U) for a in mdp.actions(s))
-            delta = max(delta, abs(U1[s] - U[s]))
+            if s in mdp.terminals:
+                U[s] = mdp.R(s)
+                continue
+
+            U[s] = max(q_value(mdp, s, a, U_prev) for a in mdp.actions(s))
+            delta = max(delta, abs(U[s] - U_prev[s]))
 
         if delta <= epsilon * (1 - gamma) / gamma:
             return U
@@ -156,9 +165,15 @@ def value_iteration(mdp, epsilon=0.001):
 
 def best_policy(mdp, U):
     """Return best policy π* for utility mapping U."""
-    return {s: max(mdp.actions(s), key=lambda a: q_value(mdp, s, a, U))
-            for s in mdp.states}
+    pi = {}
+    for s in mdp.states:
+        if s in mdp.terminals:
+            pi[s] = None
+        else:
+            pi[s] = max(mdp.actions(s), key=lambda a: q_value(mdp, s, a, U))
+    return pi
 
 
 def expected_utility(a, s, U, mdp):
+    """EU(s,a) = Σ p(s'|s,a) U(s')."""
     return sum(p * U[s1] for p, s1 in mdp.T(s, a))
