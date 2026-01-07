@@ -1,12 +1,32 @@
-from search.search import Problem
+from search.common import Problem
+
 
 class CampusProblem(Problem):
-    def __init__(self, initial, goal, campus_map):
+    def __init__(self, initial, goal=None, campus_map=None, goals=None):
+        """
+        Campus navigation search problem.
+
+        Args:
+            initial: (floor, x, y)
+            goal: single goal state (floor, x, y) [optional]
+            goals: iterable of goal states for multi-goal search (nearest POI etc.)
+            campus_map: list[floor][y][x] of chars
+        """
         super().__init__(initial, goal)
         self.campus_map = campus_map
+
         self.max_floors = len(campus_map)
         self.max_y = len(campus_map[0])
         self.max_x = len(campus_map[0][0])
+
+        # Multi-goal support
+        if goals is not None:
+            self.goals = set(goals)
+        elif goal is not None:
+            self.goals = {goal}
+        else:
+            self.goals = set()
+
 
     def in_bounds(self, f, x, y):
         return 0 <= f < self.max_floors and 0 <= x < self.max_x and 0 <= y < self.max_y
@@ -14,16 +34,16 @@ class CampusProblem(Problem):
     def is_wall(self, f, x, y):
         return self.campus_map[f][y][x] == "#"
 
+
     def actions(self, state):
         floor, x, y = state
         acts = []
 
-        # 4-directional movements
         directions = {
             "UP": (0, -1),
             "DOWN": (0, 1),
             "LEFT": (-1, 0),
-            "RIGHT": (1, 0)
+            "RIGHT": (1, 0),
         }
 
         for a, (dx, dy) in directions.items():
@@ -31,7 +51,6 @@ class CampusProblem(Problem):
             if self.in_bounds(floor, nx, ny) and not self.is_wall(floor, nx, ny):
                 acts.append(a)
 
-        # vertical movements depend on the current cell
         cell = self.campus_map[floor][y][x]
 
         def can_go(df):
@@ -41,11 +60,9 @@ class CampusProblem(Problem):
         if cell == "E":
             if can_go(+1): acts.append("ELEVATOR_UP")
             if can_go(-1): acts.append("ELEVATOR_DOWN")
-
         elif cell == "S":
             if can_go(+1): acts.append("STAIR_UP")
             if can_go(-1): acts.append("STAIR_DOWN")
-
         elif cell == "X":
             if can_go(+1): acts.append("ESCALATOR_UP")
             if can_go(-1): acts.append("ESCALATOR_DOWN")
@@ -78,6 +95,7 @@ class CampusProblem(Problem):
         if not self.in_bounds(nf, nx, ny) or self.is_wall(nf, nx, ny):
             return state
         return (nf, nx, ny)
+    
 
     def path_cost(self, c, state1, action, state2):
         if action in ("UP", "DOWN", "LEFT", "RIGHT"):
@@ -86,14 +104,18 @@ class CampusProblem(Problem):
             step_cost = 4
         elif action in ("ELEVATOR_UP", "ELEVATOR_DOWN"):
             step_cost = 2
-        elif action in ("STAIR_UP", "STAIR_DOWN"):
-            step_cost = 10
+        elif action == "STAIR_UP":
+            step_cost = 12
+        elif action == "STAIR_DOWN":
+            step_cost = 6
         else:
             step_cost = 5
+
         return c + step_cost
 
     def action_cost(self, state1, action, state2):
         return self.path_cost(0, state1, action, state2)
 
+
     def is_goal(self, state):
-        return state == self.goal
+        return state in self.goals
