@@ -21,7 +21,7 @@ def main():
     campus_map = build_campus_map()
 
     initial = (0, 21, 7)
-    goal = (5, 4, 1)
+    goal = (5, 5, 5)
 
     problem = CampusProblem(initial=initial, goal=goal, campus_map=campus_map)
 

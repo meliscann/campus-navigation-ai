@@ -16,8 +16,8 @@ def main():
         goal_reward=100,
         crowd_stay_prob=0.05,
         slip_prob=0.10,
-        elevator_delay_prob=0.30,
-        escalator_fail_prob=0.15
+        elevator_delay_prob=0.20,
+        escalator_fail_prob=0.40
     )
 
     U = value_iteration(mdp, epsilon=0.01)
