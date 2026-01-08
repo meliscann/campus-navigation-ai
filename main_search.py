@@ -1,7 +1,7 @@
 from search.ucs import uniform_cost_search
 from search.bfs import breadth_first_search
 from search.astar import astar_search
-from heuristics.cost_aware import make_cost_aware_heuristic
+from search.heuristics import make_cost_aware_heuristic
 
 from search.common import failure
 from environment.campus_search import CampusProblem
@@ -60,7 +60,7 @@ def pick_destination_category():
 
 def main():
     campus_map = build_campus_map()
-    initial = (0, 21, 7)
+    initial = (0, 22, 6)
 
     # 1) Destination category -> goals list
     category = pick_destination_category()
